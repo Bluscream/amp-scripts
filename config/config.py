@@ -9,7 +9,7 @@ from shutil import copy2
 from utils import get_safe
 
 
-class MetaConfigItem:
+class TemplateConfigItem:
     display_name: str
     category: str = "Server Settings"
     description: str
@@ -26,7 +26,10 @@ class MetaConfigItem:
     skip_if_empty: Optional[bool]
     enum_values: Optional[dict[str,Any]]
 
-    def __init__(self, display_name: str, category: str, description: str, keywords: str, field_name: str, input_type: str, is_flag_argument: bool, param_field_name: str, include_in_command_line: bool, default_value: str, placeholder: str, suffix: Suffix, hidden: bool, skip_if_empty: bool, enum_values: EnumValues) -> None:
+    # def __init__(self):
+    #     self.display_name
+
+    def __init__(self, display_name: str, category: str, description: str, keywords: str, field_name: str, input_type: str, is_flag_argument: bool, param_field_name: str, include_in_command_line: bool, default_value: str, placeholder: str, suffix: str, hidden: bool, skip_if_empty: bool, enum_values: dict[str,Any]) -> None:
         self.display_name = display_name
         self.category = category
         self.description = description
@@ -44,7 +47,7 @@ class MetaConfigItem:
         self.enum_values = enum_values
 
     @staticmethod
-    def from_dict(obj: Any) -> 'MetaConfigItem':
+    def from_dict(obj: dict[str, Any]) -> 'TemplateConfigItem':
         if not obj: return None
         _DisplayName = get_safe(obj, "DisplayName")
         _Category = get_safe(obj, "Category")
@@ -61,14 +64,14 @@ class MetaConfigItem:
         _Hidden = get_safe(obj, "Hidden")
         _SkipIfEmpty = get_safe(obj, "SkipIfEmpty")
         _EnumValues = get_safe(obj, "EnumValues")
-        return MetaConfigItem(_DisplayName, _Category, _Description, _Keywords, _FieldName, _InputType, _IsFlagArgument, _ParamFieldName, _IncludeInCommandLine, _DefaultValue, _Placeholder, _Suffix, _Hidden, _SkipIfEmpty, _EnumValues)
+        return TemplateConfigItem(_DisplayName, _Category, _Description, _Keywords, _FieldName, _InputType, _IsFlagArgument, _ParamFieldName, _IncludeInCommandLine, _DefaultValue, _Placeholder, _Suffix, _Hidden, _SkipIfEmpty, _EnumValues)
 
 
 
-class MetaConfig:
+class TemplateConfig:
     path: Path
     raw: dict[str, Any]
-    items: list['MetaConfigItem']
+    items: list['TemplateConfigItem']
     logger = getLogger(__name__)
 
     def __init__(self, path: Path) -> None:
@@ -79,7 +82,7 @@ class MetaConfig:
         path = path or self.path
         with open(path, 'r') as f:
             self.raw = json_loads(f.read())
-        self.items = [MetaConfigItem(item) for item in self.raw]
+        self.items = [TemplateConfigItem.from_dict(item) for item in self.raw]
         self.logger.debug(f'Loaded {len(self.items)} items from {path}')
 
     def save(self, path: Path = None, backup: bool = True) -> None:

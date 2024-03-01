@@ -1,5 +1,5 @@
 from .ampconfig import *
-from .metaconfig import *
+from .config import *
 from .uniquejsonparser import *
 
 from typing import TYPE_CHECKING

@@ -7,7 +7,7 @@ from copy import copy
 from datetime import datetime
 from pathlib import Path
 
-from config import MetaConfig, UniqueJsonParser
+from config import TemplateConfig, UniqueJsonParser
 
 from typing import Any, Optional, Union
 PathLike = Union[str, Path]
@@ -28,14 +28,18 @@ logger.debug(f'Script location: {self}')
 
 if __name__ == '__main__':
 
-    metacfg = MetaConfig(Path('amp/test/iw4madminmetaconfig.json'))
-    logger.debug(f'Loaded {len(metacfg.items)} items from {metacfg.path}')
-    json_dir = Path('amp/test/Configuration')
+    base_dir = self.parent / 'test'
+
+    templateCfg = TemplateConfig(base_dir / 'iw4madminconfig.json')
+    logger.debug(f'Loaded {len(templateCfg.items)} items from {templateCfg.path}')
+    json_dir = base_dir / 'Configuration'
     json_files = list(json_dir.glob('**/*.json'))
     logger.debug(f'Found {len(json_files)} JSON files in {json_dir}')
 
     merger = UniqueJsonParser()
-    merger.add_files(json_files)
+    errors = merger.add_files(json_files, skip_errors=True)
+    for error in errors:
+        logger.error(error)
     print(merger.merged_dict)
 
     # orig_cfg.save('amp/test/AMPConfig_patched.conf')
