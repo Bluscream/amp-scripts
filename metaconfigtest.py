@@ -41,7 +41,12 @@ if __name__ == '__main__':
     logger.debug(f'Found {len(errors)} errors in {len(json_files)} files')
     # for error in errors:
         # logger.error(error)
-    print(merger.merged_dict)
+    logger.debug(merger.data)
+    logger.warn(merger.duplicates)
+    with open(base_dir / 'errors.json', 'w') as f: json.dump(errors, f, indent=4)
+    with open(base_dir / 'merged.json', 'w') as f: json.dump(merger.data, f, indent=4)
+    with open(base_dir / 'merged_with_ids.json', 'w') as f: json.dump(merger.data_with_ids, f, indent=4)
+    with open(base_dir / 'duplicates.json', 'w') as f: json.dump(merger.duplicates, f, indent=4)
 
     # orig_cfg.save('amp/test/AMPConfig_patched.conf')
     pass

@@ -6,20 +6,29 @@ from jsonpath_ng import jsonpath, parse, exceptions
 
 class UniqueJsonParser:
     logger = getLogger(__name__)
-    data: Dict[str, Any]
+    data: Dict[str, Any] = {}
+    duplicates: list[str] = []
+    data_with_ids: Dict[str, Dict[str, Any]] = {}
 
     def __init__(self):
-        self.merged_dict: Dict[str, Any] = {}
+        self.data: Dict[str, Any] = {}
+        self.duplicates: list[str] = []
+        self.data_with_ids: Dict[str, Dict[str, Any]] = {}
 
     def add_file(self: 'UniqueJsonParser', json_file: Path, skip_errors: bool = False) -> list[str]: return self.add_files([json_file], skip_errors)
     def add_files(self: 'UniqueJsonParser', json_files: list[Path], skip_errors: bool = False) -> list[str]:
         errors = []
         for file in json_files:
-            relative_path = file.relative_to(Path.cwd())
+            relative_path = str(file.relative_to(Path.cwd()))
             self.logger.info(f"Processing file {relative_path}")
             _errors = self._merge_json_file(file = file, skip_errors = skip_errors, id=relative_path)
             self.logger.debug(f"Processed file {relative_path} with {len(_errors)} errors.")
             errors += _errors
+        for file in json_files:
+            relative_path = str(file.relative_to(Path.cwd()))
+            text = file.read_text()
+            data = json.loads(text)
+            if not relative_path in self.data_with_ids: self.data_with_ids[relative_path] = self._get_dict_without_duplicate_paths(data, key_jpath = "$")
         return errors
 
     def _merge_json_file(self: 'UniqueJsonParser', file: Path, skip_errors: bool = False, id: str = None) -> list[str]:
@@ -52,10 +61,23 @@ class UniqueJsonParser:
                 else: raise ValueError(msg)
             errors += self._merge_dict(data = data, skip_errors = skip_errors, id = id)
         return errors
+    
+    def _get_dict_without_duplicate_paths(self, data: Dict[str, Any], key_jpath: str = "$") -> Dict[str, Any]:
+        new_dict = {}
+        for key, value in data.items():
+            full_key_jpath = f"{key_jpath}.['{key}']"
+            if full_key_jpath in self.duplicates:
+                self.logger.debug(f"Skipping duplicate key \"{full_key_jpath}\"")
+                continue
+            if isinstance(value, dict):
+                new_dict[key] = self._get_dict_without_duplicate_paths(value, key_jpath=full_key_jpath)
+            else:
+                new_dict[key] = value
+        return new_dict
 
     def _merge_dict(self, data: Dict[str, Any], skip_errors: bool = False, id: str = None, key_jpath: str = "$") -> list[str]:
         errors = []
-        new_dict = self.merged_dict.copy()
+        new_dict = self.data.copy()
 
         for key, value in data.items():
             # Construct the full path for the current key
@@ -70,6 +92,7 @@ class UniqueJsonParser:
             exists = jsonpath_expr.find(new_dict)
             if exists:
                 msg = f"[{id}] Key \"{full_key_jpath}\" already exists in the merged dictionary."
+                self.duplicates.append(full_key_jpath)
                 errors.append(msg)
                 if skip_errors:
                     self.logger.error(msg)
@@ -78,15 +101,14 @@ class UniqueJsonParser:
                     raise ValueError(msg)
             
             if isinstance(value, dict):
-                # Ensure the key in the merged dictionary is also a dict before merging
-                if exists and not isinstance(new_dict[key], dict):
-                    msg = f"[{id}] Key \"{full_key_jpath}\" is not a dictionary in the merged dictionary."
-                    errors.append(msg)
-                    if skip_errors:
-                        self.logger.error(msg)
-                        continue
-                    else:
-                        raise ValueError(msg)
+            #     if exists and not isinstance(new_dict[key], dict):
+            #         msg = f"[{id}] Key \"{full_key_jpath}\" is not a dictionary in the merged dictionary."
+            #         errors.append(msg)
+            #         if skip_errors:
+            #             self.logger.error(msg)
+            #             continue
+            #         else:
+            #             raise ValueError(msg)
                 
                 # Recursive call for nested dictionaries, passing the full path for the current key
                 errors += self._merge_dict(value, skip_errors=skip_errors, id=id, key_jpath=full_key_jpath)
@@ -99,6 +121,6 @@ class UniqueJsonParser:
             if not skip_errors:
                 raise ValueError(msg)
         else:
-            self.merged_dict = new_dict
+            self.data = new_dict
         
         return errors
