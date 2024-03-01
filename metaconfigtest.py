@@ -38,8 +38,9 @@ if __name__ == '__main__':
 
     merger = UniqueJsonParser()
     errors = merger.add_files(json_files, skip_errors=True)
-    for error in errors:
-        logger.error(error)
+    logger.debug(f'Found {len(errors)} errors in {len(json_files)} files')
+    # for error in errors:
+        # logger.error(error)
     print(merger.merged_dict)
 
     # orig_cfg.save('amp/test/AMPConfig_patched.conf')

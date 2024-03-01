@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "metaconfigtest",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "metaconfigtest.py",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python Debugger: Current File with Arguments",
             "type": "debugpy",
             "request": "launch",
